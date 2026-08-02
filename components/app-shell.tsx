@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
 import type { RepoRecord, SessionUser } from "@/lib/types";
 
@@ -24,6 +24,10 @@ export function AppShell({ user, repos, currentRepo, children }: AppShellProps) 
   const router = useRouter();
   const [selectedRepo, setSelectedRepo] = useState(currentRepo);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setSelectedRepo(currentRepo);
+  }, [currentRepo]);
 
   async function updateRepo(repo: string) {
     setSelectedRepo(repo);
