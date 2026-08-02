@@ -12,6 +12,23 @@ function optional(name: string, fallback = ""): string {
   return process.env[name] ?? fallback;
 }
 
+export function getAppBaseUrl(requestUrl?: string) {
+  if (requestUrl) {
+    return new URL(requestUrl).origin;
+  }
+
+  const configured = optional("APP_URL", "").trim();
+  if (configured) {
+    try {
+      return new URL(configured).origin;
+    } catch {
+      return configured;
+    }
+  }
+
+  return "http://localhost:3000";
+}
+
 export const env = {
   appUrl: optional("APP_URL", "http://localhost:3000"),
   sessionSecret: required("SESSION_SECRET"),

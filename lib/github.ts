@@ -74,10 +74,22 @@ export async function fetchRepoTree(accessToken: string, repoId: string): Promis
   const client = githubClient(accessToken);
   const { owner, repo } = parseRepo(repoId);
   const repoInfo = await client.request("GET /repos/{owner}/{repo}", { owner, repo });
+  const branch = repoInfo.data.default_branch;
+  const refResponse = await client.request("GET /repos/{owner}/{repo}/git/refs/heads/{branch}", {
+    owner,
+    repo,
+    branch,
+  });
+  const commitSha = refResponse.data.object?.sha;
+
+  if (!commitSha) {
+    throw new Error("Failed to resolve default branch commit");
+  }
+
   const tree = await client.request("GET /repos/{owner}/{repo}/git/trees/{tree_sha}", {
     owner,
     repo,
-    tree_sha: repoInfo.data.default_branch,
+    tree_sha: commitSha,
     recursive: "1",
   });
 
