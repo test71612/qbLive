@@ -46,12 +46,15 @@ function decodeSession(value: string | undefined): SessionData | null {
   }
 }
 
-function getCookieOptions() {
+export function getCookieOptions(requestUrl?: string) {
+  const isSecure = requestUrl ? new URL(requestUrl).protocol === "https:" : process.env.NODE_ENV === "production";
+
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isSecure,
     sameSite: "lax" as const,
     path: "/",
+    maxAge: 60 * 60 * 24 * 7,
   };
 }
 
