@@ -3,6 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { logAuditEvent } from "@/lib/github";
 
+export async function GET() {
+  return NextResponse.json({ ok: true, message: "webhook endpoint is ready" });
+}
+
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
   if (env.githubWebhookSecret) {
