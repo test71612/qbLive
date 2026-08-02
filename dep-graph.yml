@@ -1,0 +1,46 @@
+# Copy this file into the TARGET repo at .github/workflows/dep-graph.yml
+#
+# It rebuilds the import graph on every push and hands it to the Ops Hub, so
+# the "related files" panel and the visual map are never stale. GitHub Actions
+# is free for public repos and gives private repos a monthly free allowance
+# that a job this small will not come close to using.
+#
+# Add two repository secrets first:
+#   OPS_HUB_URL          e.g. https://ops-hub.vercel.app
+#   GRAPH_INGEST_SECRET  the same value as in the Ops Hub environment
+
+name: Dependency graph → Ops Hub
+
+on:
+  push:
+    branches: [main, master]
+
+jobs:
+  graph:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build and send the graph
+        env:
+          OPS_HUB_URL: ${{ secrets.OPS_HUB_URL }}
+          GRAPH_INGEST_SECRET: ${{ secrets.GRAPH_INGEST_SECRET }}
+        run: |
+          npm install --no-save madge
+          cat > graph.mjs <<'JS'
+          import madge from "madge";
+          const result = await madge(".", {
+            fileExtensions: ["js", "jsx", "ts", "tsx", "mjs", "cjs"],
+            excludeRegExp: [/node_modules/, /\.next/, /dist/, /build/],
+          });
+          const res = await fetch(`${process.env.OPS_HUB_URL}/api/graph/ingest`, {
+            method: "POST",
+            headers: { "content-type": "application/json", "x-ops-hub-secret": process.env.GRAPH_INGEST_SECRET },
+            body: JSON.stringify({ repo: process.env.GITHUB_REPOSITORY, graph: result.obj(), commitSha: process.env.GITHUB_SHA }),
+          });
+          console.log(res.status, await res.text());
+          JS
+          node graph.mjs
