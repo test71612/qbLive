@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { env } from "@/lib/env";
 import type { SessionUser } from "@/lib/types";
 
@@ -58,6 +58,21 @@ export function getCookieOptions(requestUrl?: string) {
   };
 }
 
+// Best-effort way to recover the current request's origin when no explicit
+// requestUrl is passed in (e.g. from a Server Action rather than a Route
+// Handler). Falls back to env.appUrl if headers aren't available.
+async function currentRequestUrl(): Promise<string | undefined> {
+  try {
+    const headerStore = await headers();
+    const host = headerStore.get("x-forwarded-host") ?? headerStore.get("host");
+    const proto = headerStore.get("x-forwarded-proto") ?? "https";
+    if (host) return `${proto}://${host}`;
+  } catch {
+    // headers() not available in this context — fall through.
+  }
+  return env.appUrl || undefined;
+}
+
 export async function getSession(): Promise<Session> {
   const cookieStore = await cookies();
   const storedValue = cookieStore.get(sessionCookieName)?.value;
@@ -72,7 +87,8 @@ export async function getSession(): Promise<Session> {
     ...sessionState,
     async save() {
       const currentStore = await cookies();
-      currentStore.set(sessionCookieName, encodeSession(sessionState), getCookieOptions());
+      const requestUrl = await currentRequestUrl();
+      currentStore.set(sessionCookieName, encodeSession(sessionState), getCookieOptions(requestUrl));
     },
     async destroy() {
       const currentStore = await cookies();
