@@ -10,8 +10,10 @@ type SessionData = {
   repo?: string;
 };
 
+export const sessionCookieName = "ops_hub_session";
+
 const sessionOptions: SessionOptions = {
-  cookieName: "ops_hub_session",
+  cookieName: sessionCookieName,
   password: env.sessionSecret,
   cookieOptions: {
     httpOnly: true,

@@ -19,7 +19,11 @@ export async function GET(request: NextRequest) {
     session.repo = session.repo || env.defaultRepo || "";
     await session.save();
 
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    const response = NextResponse.redirect(new URL("/dashboard", request.url));
+    response.headers.set("x-session-saved", "true");
+    response.headers.set("x-session-user", user.login);
+    response.headers.set("x-session-origin", new URL(request.url).origin);
+    return response;
   } catch {
     return NextResponse.redirect(new URL("/?error=oauth_failed", request.url));
   }
