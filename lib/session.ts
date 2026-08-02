@@ -17,7 +17,7 @@ type Session = SessionData & {
 
 export const sessionCookieName = "ops_hub_session";
 
-function encodeSession(value: SessionData): string {
+export function encodeSession(value: SessionData): string {
   const payload = Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
   const signature = createHmac("sha256", env.sessionSecret).update(payload).digest("hex");
   return `${signature}.${payload}`;
