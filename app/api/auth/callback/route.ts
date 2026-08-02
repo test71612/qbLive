@@ -1,0 +1,24 @@
+import { NextRequest, NextResponse } from "next/server";
+import { exchangeGitHubCode, loadGitHubUser, upsertAppUser } from "@/lib/github";
+import { getSession } from "@/lib/session";
+
+export async function GET(request: NextRequest) {
+  const code = request.nextUrl.searchParams.get("code");
+  if (!code) {
+    return NextResponse.redirect(new URL("/?error=missing_code", request.url));
+  }
+
+  try {
+    const accessToken = await exchangeGitHubCode(code);
+    const user = await loadGitHubUser(accessToken);
+    await upsertAppUser(user);
+
+    const session = await getSession();
+    session.user = user;
+    await session.save();
+
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  } catch {
+    return NextResponse.redirect(new URL("/?error=oauth_failed", request.url));
+  }
+}

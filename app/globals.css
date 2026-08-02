@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f5f7fb;
+  --foreground: #111827;
+  --card: #ffffff;
+  --muted: #64748b;
+  --border: #dbe4f0;
+  --brand: #2563eb;
+  --brand-soft: #dbeafe;
+  --success: #15803d;
+  --warning: #b45309;
+  --danger: #b91c1c;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-cairo);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-cairo), Arial, Helvetica, sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.shell {
+  @apply mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-4 sm:px-6 lg:px-8;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  @apply rounded-2xl shadow-sm;
+}
+
+.btn-primary {
+  @apply inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700;
+}
+
+.btn-secondary {
+  @apply inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50;
+}
+
+.input {
+  @apply w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100;
+}
+
+.textarea {
+  @apply min-h-28 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.pill {
+  @apply inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold;
+}
+
+.pill-locked {
+  background: #fee2e2;
+  color: var(--danger);
+}
+
+.pill-free {
+  background: #dcfce7;
+  color: var(--success);
+}
+
+.code {
+  font-family: var(--font-geist-mono), monospace;
+}
+
+.tree-button {
+  @apply flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-right text-sm transition hover:bg-slate-100;
+}
+
+.top-grid {
+  @apply grid gap-6 lg:grid-cols-[1.35fr_0.95fr];
+}
