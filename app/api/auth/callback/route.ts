@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { env } from "@/lib/env";
 import { exchangeGitHubCode, loadGitHubUser, upsertAppUser } from "@/lib/github";
 import { getSession } from "@/lib/session";
 
@@ -15,6 +16,7 @@ export async function GET(request: NextRequest) {
 
     const session = await getSession();
     session.user = user;
+    session.repo = session.repo || env.defaultRepo || "";
     await session.save();
 
     return NextResponse.redirect(new URL("/dashboard", request.url));
