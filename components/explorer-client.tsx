@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getBrowserSupabase } from "@/lib/supabase-browser";
 import { ProjectGuide } from "@/components/project-guide";
 import { buildTree, cn, formatRelativeDate, isTextPath } from "@/lib/utils";
@@ -34,6 +34,7 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
   const [commitMessage, setCommitMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [editorMessage, setEditorMessage] = useState("");
+  const uploadInput = useRef<HTMLInputElement>(null);
 
   const loadLocks = useCallback(async () => {
     const response = await fetch(`/api/locks?repo=${encodeURIComponent(repo)}`);
@@ -258,6 +259,55 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
     await saveToMain(historicFile.content, `Restore ${selectedPath} to ${commit.sha}`);
   }
 
+  async function createFile(path: string, content: string, message: string) {
+    const response = await fetch("/api/github/file", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ repo, path, content, message }) });
+    if (!response.ok) { setEditorMessage("تعذر إنشاء الملف. تأكد من الاسم وحاول مرة أخرى."); return; }
+    await loadTree();
+    openPath(path);
+  }
+
+  async function createNewFile() {
+    const path = window.prompt("مسار الملف الجديد، مثال: src/components/card.tsx");
+    if (!path?.trim()) return;
+    await createFile(path.trim(), "", `Create ${path.trim()}`);
+  }
+
+  async function createFolder() {
+    const folder = window.prompt("مسار المجلد الجديد، مثال: src/features/chat");
+    if (!folder?.trim()) return;
+    const cleanFolder = folder.trim().replace(/\/$/, "");
+    await createFile(`${cleanFolder}/.gitkeep`, "", `Create folder ${cleanFolder}`);
+  }
+
+  async function uploadFile(fileToUpload: File) {
+    if (fileToUpload.size > 750_000) { setEditorMessage("الرفع من الواجهة مخصص للملفات الأصغر من 750KB."); return; }
+    const path = window.prompt("أين تريد حفظ الملف؟", fileToUpload.name);
+    if (!path?.trim()) return;
+    await createFile(path.trim(), await fileToUpload.text(), `Upload ${path.trim()}`);
+  }
+
+  function downloadFile() {
+    if (!file) return;
+    const blob = new Blob([file.content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = file.path.split("/").pop() ?? "file";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function deleteCurrentFile() {
+    if (!file || !selectedPath) return;
+    const confirmed = window.confirm(`سيتم حذف ${selectedPath} مباشرة من main. هل أنت متأكد؟`);
+    if (!confirmed) return;
+    const response = await fetch("/api/github/file", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ repo, path: selectedPath, sha: file.sha, message: `Delete ${selectedPath}` }) });
+    if (!response.ok) { setEditorMessage("تعذر حذف الملف. ربما تغيرت نسخته؛ أعد التحميل وحاول مرة أخرى."); return; }
+    setSelectedPath("");
+    setFile(null);
+    await loadTree();
+  }
+
   function renderTree(node: Map<string, unknown>, prefix = "", level = 0): React.ReactNode {
     return [...node.entries()].sort(([, left], [, right]) => Number(right instanceof Map) - Number(left instanceof Map)).map(([name, value]) => {
       const path = prefix ? `${prefix}/${name}` : name;
@@ -314,6 +364,14 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
               <p className="text-xs muted">الملف الحالي</p>
               <h2 className="mt-1 break-all text-xl font-bold">{selectedPath || "اختر ملفًا من القائمة"}</h2>
               {selectedPath && <a className="github-file-link" href={`https://github.com/${repo}/blob/HEAD/${selectedPath}`} target="_blank" rel="noreferrer">افتح الملف في GitHub ↗</a>}
+              <div className="file-actions">
+                <button className="btn-secondary" onClick={() => void createNewFile()}>+ ملف</button>
+                <button className="btn-secondary" onClick={() => void createFolder()}>+ مجلد</button>
+                <button className="btn-secondary" onClick={() => uploadInput.current?.click()}>رفع ملف</button>
+                {file && <button className="btn-secondary" onClick={downloadFile}>تنزيل</button>}
+                {file && <button className="danger-button" onClick={() => void deleteCurrentFile()}>حذف الملف</button>}
+                <input ref={uploadInput} className="hidden" type="file" onChange={(event) => { const selected = event.target.files?.[0]; if (selected) void uploadFile(selected); event.currentTarget.value = ""; }} />
+              </div>
             </div>
             {currentLock ? (
               <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">

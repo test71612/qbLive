@@ -154,6 +154,26 @@ export async function updateGitHubFile(accessToken: string, repoId: string, file
   return { commitSha: response.data.commit.sha, url: response.data.commit.html_url };
 }
 
+export async function createGitHubFile(accessToken: string, repoId: string, filePath: string, content: string, message: string) {
+  const client = githubClient(accessToken);
+  const { owner, repo } = parseRepo(repoId);
+  const response = await client.request("PUT /repos/{owner}/{repo}/contents/{path}", {
+    owner,
+    repo,
+    path: filePath,
+    message,
+    content: Buffer.from(content, "utf8").toString("base64"),
+  });
+  return { commitSha: response.data.commit.sha, url: response.data.commit.html_url };
+}
+
+export async function deleteGitHubFile(accessToken: string, repoId: string, filePath: string, sha: string, message: string) {
+  const client = githubClient(accessToken);
+  const { owner, repo } = parseRepo(repoId);
+  const response = await client.request("DELETE /repos/{owner}/{repo}/contents/{path}", { owner, repo, path: filePath, sha, message });
+  return { commitSha: response.data.commit.sha, url: response.data.commit.html_url };
+}
+
 export async function fetchCommits(accessToken: string, repoId: string, path?: string, limit = 10): Promise<GitHubCommit[]> {
   const client = githubClient(accessToken);
   const { owner, repo } = parseRepo(repoId);
