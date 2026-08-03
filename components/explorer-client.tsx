@@ -265,6 +265,7 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
             <div className="min-w-0 flex-1">
               <p className="text-xs muted">الملف الحالي</p>
               <h2 className="mt-1 break-all text-xl font-bold">{selectedPath || "اختر ملفًا من القائمة"}</h2>
+              {selectedPath && <a className="github-file-link" href={`https://github.com/${repo}/blob/HEAD/${selectedPath}`} target="_blank" rel="noreferrer">افتح الملف في GitHub ↗</a>}
             </div>
             {currentLock ? (
               <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
