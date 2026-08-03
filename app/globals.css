@@ -60,6 +60,10 @@ textarea {
 .card .text-slate-500, .card .text-slate-400 { color: #a2a8b3; }
 .card .bg-slate-50, .card .bg-slate-100 { background-color: #1d2128; }
 .card .border-slate-200, .card .border-slate-300 { border-color: #343a45; }
+.card .bg-blue-50 { background: linear-gradient(135deg, #2b1609, #1c1a18); color: #fff7ed; border: 1px solid #9a4d10; }
+.card .bg-emerald-50 { background: linear-gradient(135deg, #102d29, #171d1d); color: #ecfdf5; border: 1px solid #24796a; }
+.card .bg-blue-50 .muted { color: #fdba74; }
+.card .bg-emerald-50 .muted { color: #6ee7b7; }
 
 .btn-primary {
   @apply inline-flex items-center justify-center rounded-xl bg-orange-500 px-4 py-2 text-sm font-bold text-black transition hover:bg-orange-400;
