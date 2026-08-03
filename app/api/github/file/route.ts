@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createGitHubFile, deleteGitHubFile, fetchFile, logAuditEvent, updateGitHubFile } from "@/lib/github";
 import { getSessionUser } from "@/lib/session";
 
+function githubErrorResponse(error: unknown, fallbackStatus: number) {
+  const status = typeof error === "object" && error && "status" in error && typeof error.status === "number"
+    ? error.status
+    : fallbackStatus;
+  const message = error instanceof Error ? error.message : "github_error";
+  return NextResponse.json({ error: message }, { status: status >= 400 && status < 600 ? status : fallbackStatus });
+}
+
 export async function GET(request: NextRequest) {
   const user = await getSessionUser();
   if (!user) {
@@ -18,7 +26,7 @@ export async function GET(request: NextRequest) {
     const file = await fetchFile(user.accessToken, repo, filePath, request.nextUrl.searchParams.get("ref") ?? undefined);
     return NextResponse.json(file);
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "github_error" }, { status: 500 });
+    return githubErrorResponse(error, 502);
   }
 }
 
@@ -35,7 +43,7 @@ export async function PUT(request: NextRequest) {
     await logAuditEvent({ repo: body.repo, actor: user.login, action: "push", target: body.path, detail: { commitSha: result.commitSha, source: "qb_team_editor" } });
     return NextResponse.json(result);
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "github_update_failed" }, { status: 409 });
+    return githubErrorResponse(error, 409);
   }
 }
 
@@ -53,7 +61,7 @@ export async function POST(request: NextRequest) {
     await logAuditEvent({ repo: body.repo, actor: user.login, action: "file_create", target: body.path, detail: { commitSha: result.commitSha } });
     return NextResponse.json(result);
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "github_create_failed" }, { status: 409 });
+    return githubErrorResponse(error, 409);
   }
 }
 
@@ -67,6 +75,6 @@ export async function DELETE(request: NextRequest) {
     await logAuditEvent({ repo: body.repo, actor: user.login, action: "file_delete", target: body.path, detail: { commitSha: result.commitSha } });
     return NextResponse.json(result);
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "github_delete_failed" }, { status: 409 });
+    return githubErrorResponse(error, 409);
   }
 }

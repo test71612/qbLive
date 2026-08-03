@@ -38,6 +38,7 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
   const [editorMessage, setEditorMessage] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(() => new Set());
   const uploadInput = useRef<HTMLInputElement>(null);
+  const fileRequestVersion = useRef(0);
 
   const loadLocks = useCallback(async () => {
     const response = await fetch(`/api/locks?repo=${encodeURIComponent(repo)}`);
@@ -64,6 +65,7 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
   const loadFile = useCallback(
     async (path: string) => {
       if (!repo || !path) return;
+      const requestVersion = ++fileRequestVersion.current;
       setLoadingFile(true);
       setFileError("");
 
@@ -78,6 +80,10 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
       const notePayload = await noteRes.json();
       const relatedPayload = await relatedRes.json();
       const commitsPayload = await commitsRes.json();
+
+      // Ignore a response for an older selection. Without this guard, a late
+      // response can pair the previous file's SHA with the newly selected path.
+      if (requestVersion !== fileRequestVersion.current) return;
 
       if (!fileRes.ok) {
         setFile(null);
@@ -113,13 +119,14 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
   );
 
   useEffect(() => {
-    void Promise.all([loadTree(), loadLocks()]);
+    const initialLoad = window.setTimeout(() => void Promise.all([loadTree(), loadLocks()]), 0);
+    return () => window.clearTimeout(initialLoad);
   }, [loadLocks, loadTree]);
 
   useEffect(() => {
-    if (selectedPath) {
-      void loadFile(selectedPath);
-    }
+    if (!selectedPath) return;
+    const initialLoad = window.setTimeout(() => void loadFile(selectedPath), 0);
+    return () => window.clearTimeout(initialLoad);
   }, [loadFile, selectedPath]);
 
   useEffect(() => {
@@ -159,7 +166,12 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
   );
 
   function openPath(path: string) {
+    fileRequestVersion.current += 1;
     setSelectedPath(path);
+    setEditing(false);
+    setFile(null);
+    setDraft("");
+    setFileError("");
     window.history.replaceState(null, "", `/explorer?path=${encodeURIComponent(path)}`);
   }
 
@@ -224,7 +236,11 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
   }
 
   async function saveToMain(content = draft, message = commitMessage) {
-    if (!file || !selectedPath || !message.trim()) {
+    if (!file || !selectedPath || file.path !== selectedPath) {
+      setEditorMessage("جارٍ تحميل النسخة الصحيحة من الملف؛ انتظر لحظة ثم حاول الحفظ.");
+      return;
+    }
+    if (!message.trim()) {
       setEditorMessage("اكتب رسالة قصيرة تصف التعديل قبل الحفظ.");
       return;
     }
@@ -237,7 +253,14 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
     });
     const payload = (await response.json()) as { error?: string };
     if (!response.ok) {
-      setEditorMessage("تعذر الحفظ. ربما عدّل شخص آخر الملف؛ أعد تحميله ثم حاول مرة أخرى.");
+      const rawError = payload.error ?? "github_update_failed";
+      if (response.status === 404 || /not found|resource not accessible/i.test(rawError)) {
+        setEditorMessage("GitHub لم يسمح بالكتابة على هذا الملف. سجّل خروجاً ثم دخولاً مجدداً لمنح صلاحية repo/workflow، وتأكد أن حسابك يملك صلاحية Push للمستودع.");
+      } else if (response.status === 409) {
+        setEditorMessage(`رفض GitHub الحفظ: ${rawError}. أعد تحميل الملف فقط إذا ظهر أن SHA تغيّر فعلاً.`);
+      } else {
+        setEditorMessage(`تعذر الحفظ: ${rawError}`);
+      }
       setSaving(false);
       return;
     }
@@ -457,7 +480,7 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
           <section className="card overflow-hidden">
             <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
               <h3 className="font-bold">معاينة الملف</h3>
-              {file && isTextPath(file.path) && !editing && <button className="btn-secondary text-xs" onClick={() => { setDraft(file.content); setEditing(true); }}>عدّل الملف</button>}
+              {file && isTextPath(file.path) && !editing && !loadingFile && <button className="btn-secondary text-xs" onClick={() => { setDraft(file.content); setEditing(true); }}>عدّل الملف</button>}
             </div>
             <div className="max-h-[70vh] overflow-auto bg-slate-950 p-5 text-sm text-slate-100">
               {!selectedPath && <p>اختر ملفًا لعرض محتواه.</p>}

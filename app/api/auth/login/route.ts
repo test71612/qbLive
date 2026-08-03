@@ -7,7 +7,8 @@ export async function GET(request: NextRequest) {
   const url = new URL("https://github.com/login/oauth/authorize");
   url.searchParams.set("client_id", env.githubClientId);
   url.searchParams.set("redirect_uri", redirectUri);
-  url.searchParams.set("scope", "read:user repo");
+  // `workflow` is required by GitHub for editing files under .github/workflows.
+  url.searchParams.set("scope", "read:user repo workflow");
 
   return NextResponse.redirect(url);
 }

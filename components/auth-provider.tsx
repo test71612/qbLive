@@ -56,9 +56,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .catch(() => router.replace("/"));
 
     const presenceTimer = window.setInterval(() => {
-      void authorizedFetch("/api/developers/presence", { method: "PATCH" });
+      void authorizedFetch("/api/developers", { method: "PATCH" });
     }, 60_000);
-    void authorizedFetch("/api/developers/presence", { method: "PATCH" });
+    void authorizedFetch("/api/developers", { method: "PATCH" });
 
     return () => {
       window.clearInterval(presenceTimer);
