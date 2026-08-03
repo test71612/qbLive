@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 import { env, getAppBaseUrl } from "@/lib/env";
-import { getSession, sessionCookieName } from "@/lib/session";
+import { getSession, getSessionCookieStatus, sessionCookieName } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +12,7 @@ export default async function DiagnosticsPage() {
   const requestUrl = `${proto}://${host}`;
   const baseUrl = getAppBaseUrl(requestUrl);
   const session = await getSession();
+  const sessionCookieStatus = await getSessionCookieStatus();
 
   const oauthRedirectUri = `${baseUrl}/api/auth/callback`;
   const checks = [
@@ -86,6 +87,16 @@ export default async function DiagnosticsPage() {
           <div className="rounded-2xl border border-slate-200 p-4">
             <p className="font-semibold">هل توجد جلسة حالية؟</p>
             <p className="mt-2 text-sm text-slate-600">{session.user ? "نعم" : "لا"}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 p-4">
+            <p className="font-semibold">حالة كوكي الجلسة</p>
+            <p className="mt-2 text-sm text-slate-600">
+              {sessionCookieStatus === "valid"
+                ? "وصلت وصالحة"
+                : sessionCookieStatus === "invalid"
+                  ? "وصلت لكن التوقيع غير صالح"
+                  : "لم تصل من المتصفح"}
+            </p>
           </div>
           <div className="rounded-2xl border border-slate-200 p-4">
             <p className="font-semibold">المستخدم داخل الجلسة</p>

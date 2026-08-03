@@ -123,6 +123,17 @@ export async function getSession(): Promise<Session> {
   return session;
 }
 
+export async function getSessionCookieStatus(): Promise<"missing" | "invalid" | "valid"> {
+  const cookieStore = await cookies();
+  const storedValue = cookieStore.get(sessionCookieName)?.value;
+
+  if (!storedValue) {
+    return "missing";
+  }
+
+  return decodeSession(storedValue) ? "valid" : "invalid";
+}
+
 export async function getSessionUser() {
   const session = await getSession();
   return session.user ?? null;
