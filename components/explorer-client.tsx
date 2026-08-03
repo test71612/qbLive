@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getBrowserSupabase } from "@/lib/supabase-browser";
 import { ProjectGuide } from "@/components/project-guide";
-import { buildTree, formatRelativeDate, isTextPath } from "@/lib/utils";
+import { buildTree, cn, formatRelativeDate, isTextPath } from "@/lib/utils";
 import type { FileLock, GitHubCommit, GitHubFile, GitHubTreeNode, RelatedFileResult, Role } from "@/lib/types";
 
 type ExplorerClientProps = {
@@ -28,6 +28,7 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
   const [loadingFile, setLoadingFile] = useState(false);
   const [treeError, setTreeError] = useState("");
   const [fileError, setFileError] = useState("");
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => new Set(["app", "components", "lib"]));
 
   const loadLocks = useCallback(async () => {
     const response = await fetch(`/api/locks?repo=${encodeURIComponent(repo)}`);
@@ -144,6 +145,28 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
     [locks, selectedPath],
   );
 
+  function openPath(path: string) {
+    setSelectedPath(path);
+    window.history.replaceState(null, "", `/explorer?path=${encodeURIComponent(path)}`);
+  }
+
+  function toggleFolder(path: string) {
+    setExpandedFolders((current) => {
+      const next = new Set(current);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  }
+
+  function fileIcon(path: string) {
+    if (/\.(tsx?|jsx?)$/i.test(path)) return "⌘";
+    if (/\.(css|scss)$/i.test(path)) return "◈";
+    if (/\.(json|ya?ml)$/i.test(path)) return "{}";
+    if (/\.(md|txt)$/i.test(path)) return "≡";
+    return "·";
+  }
+
   async function saveNote() {
     if (!selectedPath || !note.trim()) return;
     const response = await fetch("/api/notes", {
@@ -187,22 +210,25 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
     await loadLocks();
   }
 
-  function renderTree(node: Map<string, unknown>, prefix = ""): React.ReactNode {
-    return [...node.entries()].map(([name, value]) => {
+  function renderTree(node: Map<string, unknown>, prefix = "", level = 0): React.ReactNode {
+    return [...node.entries()].sort(([, left], [, right]) => Number(right instanceof Map) - Number(left instanceof Map)).map(([name, value]) => {
       const path = prefix ? `${prefix}/${name}` : name;
       const isDir = value instanceof Map;
 
       if (isDir) {
         return (
-          <div key={path} className="ms-1">
-            <p className="px-2 py-1 text-xs font-bold text-slate-500">{name}</p>
-            <div className="ms-3 border-r border-slate-200 pr-2">{renderTree(value as Map<string, unknown>, path)}</div>
+          <div key={path}>
+            <button type="button" className="tree-folder" style={{ paddingInlineStart: `${level * 12 + 8}px` }} onClick={() => toggleFolder(path)}>
+              <span className={cn("tree-caret", expandedFolders.has(path) && "tree-caret-open")}>›</span><span className="tree-folder-icon">▣</span><span>{name}</span>
+            </button>
+            {expandedFolders.has(path) && <div className="tree-children">{renderTree(value as Map<string, unknown>, path, level + 1)}</div>}
           </div>
         );
       }
 
       return (
-        <button key={path} className="tree-button" onClick={() => setSelectedPath(path)}>
+        <button key={path} type="button" className={cn("tree-button", selectedPath === path && "tree-button-active")} style={{ paddingInlineStart: `${level * 12 + 12}px` }} onClick={() => openPath(path)}>
+          <span className="tree-file-icon">{fileIcon(path)}</span>
           <span className="text-slate-400">{selectedPath === path ? "●" : "○"}</span>
           <span className={selectedPath === path ? "font-semibold text-blue-700" : ""}>{name}</span>
         </button>
@@ -211,8 +237,8 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[320px_1fr]">
-      <aside className="card p-4">
+    <div className="grid gap-6 xl:grid-cols-[340px_1fr]">
+      <aside className="explorer-sidebar card p-4">
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-lg font-bold">مستكشف الملفات</h1>
           <span className="text-xs muted">{filePaths.length} ملف</span>
@@ -224,7 +250,8 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
           onChange={(event) => setSearch(event.target.value)}
         />
 
-        <div className="mt-4 max-h-[70vh] overflow-auto">
+        <div className="tree-summary mt-3"><span>شجرة المشروع</span><span>{filePaths.length} ملف</span></div>
+        <div className="mt-2 max-h-[70vh] overflow-auto pe-1">
           {loadingTree ? <p className="text-sm muted">جارٍ تحميل شجرة الملفات...</p> : renderTree(treeData)}
           {!loadingTree && treeError && <p className="text-sm text-rose-700">{treeError}</p>}
           {!loadingTree && !treeError && filePaths.length === 0 && <p className="text-sm muted">لم نجد ملفات لعرضها في هذا المستودع.</p>}
@@ -309,7 +336,7 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
                   <div className="mt-2 flex flex-wrap gap-2">
                     {related.imports.length === 0 && <span className="muted">لا توجد بيانات</span>}
                     {related.imports.map((path) => (
-                      <button key={path} className="btn-secondary" onClick={() => setSelectedPath(path)}>
+                      <button key={path} className="related-file" onClick={() => openPath(path)}>
                         {path}
                       </button>
                     ))}
@@ -320,7 +347,7 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
                   <div className="mt-2 flex flex-wrap gap-2">
                     {related.importedBy.length === 0 && <span className="muted">لا توجد بيانات</span>}
                     {related.importedBy.map((path) => (
-                      <button key={path} className="btn-secondary" onClick={() => setSelectedPath(path)}>
+                      <button key={path} className="related-file" onClick={() => openPath(path)}>
                         {path}
                       </button>
                     ))}
@@ -331,7 +358,7 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
                   <div className="mt-2 flex flex-wrap gap-2">
                     {related.manual.length === 0 && <span className="muted">لا توجد بيانات</span>}
                     {related.manual.map((path) => (
-                      <button key={path} className="btn-secondary" onClick={() => setSelectedPath(path)}>
+                      <button key={path} className="related-file" onClick={() => openPath(path)}>
                         {path}
                       </button>
                     ))}
