@@ -81,6 +81,18 @@ export function DashboardClient({ repo, role, login }: DashboardClientProps) {
 
   return (
     <div className="space-y-6">
+      <section className="journey-card">
+        <div>
+          <p className="guide-kicker">خريطة العمل</p>
+          <h1>ابدأ من هنا، خطوة بخطوة</h1>
+          <p>هذه اللوحة لا تطلب منك معرفة المشروع كله؛ اختر الخطوة المناسبة فقط.</p>
+        </div>
+        <div className="journey-steps">
+          <Link href="/explorer"><span>1</span><strong>افهم الملف</strong><small>ابحث عن الملف واسأل مرشد المشروع.</small></Link>
+          <Link href="/explorer"><span>2</span><strong>احجز العمل</strong><small>أخبر الفريق بما ستعدله ولماذا.</small></Link>
+          <Link href="/tasks"><span>3</span><strong>تابع المهمة</strong><small>انقلها عند بدء العمل وانتهائه.</small></Link>
+        </div>
+      </section>
       <section className="top-grid">
         <div className="card p-5">
           <div className="flex flex-wrap items-center gap-3">

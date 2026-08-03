@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getBrowserSupabase } from "@/lib/supabase-browser";
+import { ProjectGuide } from "@/components/project-guide";
 import { buildTree, formatRelativeDate, isTextPath } from "@/lib/utils";
 import type { FileLock, GitHubCommit, GitHubFile, GitHubTreeNode, RelatedFileResult, Role } from "@/lib/types";
 
@@ -231,6 +232,7 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
       </aside>
 
       <section className="space-y-6">
+        <ProjectGuide repo={repo} path={selectedPath} />
         <div className="card p-5">
           <div className="flex flex-wrap items-start gap-4">
             <div className="min-w-0 flex-1">

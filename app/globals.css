@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5f7fb;
-  --foreground: #111827;
+  --background: #f7f8fc;
+  --foreground: #172033;
   --card: #ffffff;
   --muted: #64748b;
   --border: #dbe4f0;
@@ -53,7 +53,7 @@ textarea {
 .card {
   background: var(--card);
   border: 1px solid var(--border);
-  @apply rounded-2xl shadow-sm;
+  @apply rounded-3xl shadow-sm;
 }
 
 .btn-primary {
@@ -101,3 +101,26 @@ textarea {
 .top-grid {
   @apply grid gap-6 lg:grid-cols-[1.35fr_0.95fr];
 }
+
+.journey-card,
+.guide-card {
+  background: linear-gradient(135deg, #102a56 0%, #1d4ed8 62%, #38bdf8 150%);
+  color: white;
+  @apply rounded-3xl p-6 shadow-lg;
+}
+
+.journey-card h1,
+.guide-card h3 { @apply mt-1 text-2xl font-bold; }
+.journey-card > div > p:last-child,
+.guide-card > div > p:last-child { @apply mt-2 text-sm leading-6 text-blue-100; }
+.guide-kicker { @apply text-xs font-bold tracking-wide text-cyan-200; }
+.journey-steps { @apply mt-6 grid gap-3 md:grid-cols-3; }
+.journey-steps a { @apply rounded-2xl bg-white/10 p-4 transition hover:-translate-y-0.5 hover:bg-white/20; }
+.journey-steps span { @apply mb-3 flex h-7 w-7 items-center justify-center rounded-full bg-cyan-300 text-xs font-black text-blue-950; }
+.journey-steps strong { @apply block text-sm; }
+.journey-steps small { @apply mt-1 block text-xs leading-5 text-blue-100; }
+.guide-prompts { @apply mt-5 flex flex-wrap gap-2; }
+.guide-prompts button { @apply rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-semibold transition hover:bg-white/20; }
+.guide-input { @apply mt-4 flex flex-col gap-2 sm:flex-row; }
+.guide-input .input { @apply border-white/20 bg-white text-slate-900; }
+.guide-answer { @apply mt-4 rounded-2xl bg-white/10 p-4 text-sm leading-7 text-blue-50; }
