@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { DashboardClient } from "@/components/dashboard-client";
 import { getShellData } from "@/lib/page-data";
 
@@ -7,7 +8,16 @@ export default async function DashboardPage() {
   const { user, currentRepo } = await getShellData();
 
   if (!user) {
-    return null;
+    return (
+      <div className="card p-6 text-sm muted">
+        لم يتم العثور على جلسة نشطة. يرجى تسجيل الدخول مرة أخرى ثم إعادة تحميل الصفحة.
+        <div className="mt-4">
+          <Link href="/" className="btn-primary">
+            الذهاب إلى الصفحة الرئيسية
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   if (!currentRepo) {

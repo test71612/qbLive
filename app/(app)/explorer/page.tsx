@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ExplorerClient } from "@/components/explorer-client";
 import { getShellData } from "@/lib/page-data";
 
@@ -15,7 +16,16 @@ export default async function ExplorerPage({ searchParams }: ExplorerPageProps) 
   const path = Array.isArray(params.path) ? params.path[0] : params.path;
 
   if (!user) {
-    return null;
+    return (
+      <div className="card p-6 text-sm muted">
+        لم يتم العثور على جلسة نشطة. يرجى تسجيل الدخول مرة أخرى ثم إعادة تحميل الصفحة.
+        <div className="mt-4">
+          <Link href="/" className="btn-primary">
+            الذهاب إلى الصفحة الرئيسية
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   if (!currentRepo) {

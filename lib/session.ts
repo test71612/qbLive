@@ -89,6 +89,16 @@ async function currentRequestUrl(): Promise<string | undefined> {
   return env.appUrl || undefined;
 }
 
+export async function writeSessionCookie(value: SessionData, requestUrl?: string) {
+  const currentStore = await cookies();
+  currentStore.set(sessionCookieName, encodeSession(value), getCookieOptions(requestUrl));
+}
+
+export async function clearSessionCookie() {
+  const currentStore = await cookies();
+  currentStore.delete(sessionCookieName);
+}
+
 export async function getSession(): Promise<Session> {
   const cookieStore = await cookies();
   const storedValue = cookieStore.get(sessionCookieName)?.value;
@@ -102,13 +112,11 @@ export async function getSession(): Promise<Session> {
   return {
     ...sessionState,
     async save() {
-      const currentStore = await cookies();
       const requestUrl = await currentRequestUrl();
-      currentStore.set(sessionCookieName, encodeSession(sessionState), getCookieOptions(requestUrl));
+      await writeSessionCookie(sessionState, requestUrl);
     },
     async destroy() {
-      const currentStore = await cookies();
-      currentStore.delete(sessionCookieName);
+      await clearSessionCookie();
     },
   };
 }
