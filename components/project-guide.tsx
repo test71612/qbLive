@@ -16,8 +16,8 @@ export function ProjectGuide({ repo, path }: { repo: string; path: string }) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ repo, path, question: nextQuestion }),
     });
-    const payload = (await response.json()) as { answer?: string; error?: string };
-    setAnswer(payload.answer ?? (payload.error === "ai_not_configured" ? "أضف AI_API_KEY في Vercel لتفعيل المساعد." : "تعذر الوصول إلى المساعد الآن."));
+    const payload = (await response.json()) as { answer?: string; error?: string; reason?: string };
+    setAnswer(payload.answer ?? (payload.error === "ai_not_configured" ? "أضف AI_API_KEY في Vercel لتفعيل المساعد." : payload.reason ?? "تعذر الوصول إلى المساعد الآن."));
     setLoading(false);
   }
 

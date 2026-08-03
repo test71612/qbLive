@@ -36,7 +36,13 @@ export async function POST(request: NextRequest) {
     }),
   });
 
-  if (!response.ok) return NextResponse.json({ error: "ai_request_failed" }, { status: 502 });
+  if (!response.ok) {
+    const providerError = (await response.json().catch(() => null)) as { error?: { message?: string } } | null;
+    return NextResponse.json(
+      { error: "ai_request_failed", reason: providerError?.error?.message?.slice(0, 300) ?? "رفض مزود الذكاء الاصطناعي الطلب." },
+      { status: 502 },
+    );
+  }
   const payload = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
   return NextResponse.json({ answer: payload.choices?.[0]?.message?.content ?? "لم يصل رد من المساعد." });
 }

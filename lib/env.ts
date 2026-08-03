@@ -67,5 +67,5 @@ export const env = {
   lockIdleHours: Number(optional("LOCK_IDLE_HOURS", "3")),
   aiApiKey: optional("AI_API_KEY"),
   aiBaseUrl: optional("AI_BASE_URL", "https://openrouter.ai/api/v1"),
-  aiModel: optional("AI_MODEL", "meta-llama/llama-3.3-70b-instruct:free"),
+  aiModel: optional("AI_MODEL", "openrouter/free"),
 };
