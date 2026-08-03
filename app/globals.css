@@ -118,6 +118,8 @@ textarea {
 .tree-button-active { @apply bg-orange-500 font-semibold text-black shadow-sm hover:bg-orange-400 hover:text-black; }
 .tree-button-active .tree-file-icon { @apply bg-white/20 text-white; }
 .tree-button-active .text-blue-700 { color: #111827; }
+.tree-select { @apply ms-auto inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-white/20 bg-black/20 text-[10px] text-transparent transition hover:border-orange-300; }
+.tree-select-active { @apply border-orange-400 bg-orange-500 text-black; }
 .related-file { @apply w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-right text-xs font-medium text-slate-700 transition hover:border-orange-300 hover:bg-orange-500/10 hover:text-orange-200; }
 
 .github-file-link { @apply mt-3 inline-flex rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-1.5 text-xs font-bold text-orange-300 transition hover:bg-orange-500 hover:text-black; }
@@ -145,6 +147,10 @@ textarea {
 .map-empty h2 { @apply text-2xl font-black text-orange-300; }
 .map-empty p { @apply mx-auto my-3 max-w-xl text-sm leading-7 text-slate-400; }
 .editor-textarea { @apply min-h-[52vh] w-full rounded-xl border border-orange-400/30 bg-black/30 p-4 text-sm text-orange-50 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-500/20; }
+.code-editor { @apply overflow-hidden rounded-xl border border-orange-400/30; }
+.code-editor-fullscreen { @apply fixed inset-0 z-50 bg-[#0c0d10] p-4; }
+.code-editor-bar { @apply flex items-center justify-between bg-[#181b21] px-3 py-2 text-xs font-bold text-slate-300; }
+.code-editor-bar button { @apply rounded-lg bg-orange-500 px-3 py-1.5 text-xs font-bold text-black transition hover:bg-orange-400; }
 .file-actions { @apply mt-3 flex flex-wrap gap-2; }
 .file-actions .btn-secondary, .danger-button { @apply px-3 py-1.5 text-xs; }
 .danger-button { @apply inline-flex items-center justify-center rounded-xl border border-rose-500/30 bg-rose-500/10 font-bold text-rose-300 transition hover:bg-rose-500 hover:text-white; }

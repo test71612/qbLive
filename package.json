@@ -10,9 +10,13 @@
     "graph": "node generate-dep-graph.mjs"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
     "@supabase/supabase-js": "^2.111.0",
+    "@types/jszip": "^3.4.0",
     "clsx": "^2.1.1",
     "iron-session": "^8.0.4",
+    "jszip": "^3.10.1",
+    "monaco-editor": "^0.56.0",
     "next": "16.2.12",
     "octokit": "^5.0.5",
     "react": "19.2.4",

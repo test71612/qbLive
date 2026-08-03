@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import JSZip from "jszip";
 import { getBrowserSupabase } from "@/lib/supabase-browser";
+import { CodeEditor } from "@/components/code-editor";
 import { ProjectGuide } from "@/components/project-guide";
 import { buildTree, cn, formatRelativeDate, isTextPath } from "@/lib/utils";
 import type { FileLock, GitHubCommit, GitHubFile, GitHubTreeNode, RelatedFileResult, Role } from "@/lib/types";
@@ -34,6 +36,7 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
   const [commitMessage, setCommitMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [editorMessage, setEditorMessage] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(() => new Set());
   const uploadInput = useRef<HTMLInputElement>(null);
 
   const loadLocks = useCallback(async () => {
@@ -261,19 +264,22 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
 
   async function createFile(path: string, content: string, message: string) {
     const response = await fetch("/api/github/file", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ repo, path, content, message }) });
-    if (!response.ok) { setEditorMessage("تعذر إنشاء الملف. تأكد من الاسم وحاول مرة أخرى."); return; }
+    const payload = (await response.json()) as { error?: string };
+    if (!response.ok) { setEditorMessage(payload.error ?? "تعذر إنشاء الملف. تأكد من الاسم وحاول مرة أخرى."); return; }
     await loadTree();
     openPath(path);
   }
 
   async function createNewFile() {
-    const path = window.prompt("مسار الملف الجديد، مثال: src/components/card.tsx");
+    const folder = selectedPath.includes("/") ? selectedPath.slice(0, selectedPath.lastIndexOf("/")) : "";
+    const path = window.prompt("اسم الملف الجديد (سيُنشأ في المجلد الحالي تلقائياً)", `${folder ? `${folder}/` : ""}new-file.ts`);
     if (!path?.trim()) return;
     await createFile(path.trim(), "", `Create ${path.trim()}`);
   }
 
   async function createFolder() {
-    const folder = window.prompt("مسار المجلد الجديد، مثال: src/features/chat");
+    const parent = selectedPath.includes("/") ? selectedPath.slice(0, selectedPath.lastIndexOf("/")) : "";
+    const folder = window.prompt("اسم المجلد الجديد", `${parent ? `${parent}/` : ""}new-folder`);
     if (!folder?.trim()) return;
     const cleanFolder = folder.trim().replace(/\/$/, "");
     await createFile(`${cleanFolder}/.gitkeep`, "", `Create folder ${cleanFolder}`);
@@ -281,7 +287,8 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
 
   async function uploadFile(fileToUpload: File) {
     if (fileToUpload.size > 750_000) { setEditorMessage("الرفع من الواجهة مخصص للملفات الأصغر من 750KB."); return; }
-    const path = window.prompt("أين تريد حفظ الملف؟", fileToUpload.name);
+    const parent = selectedPath.includes("/") ? selectedPath.slice(0, selectedPath.lastIndexOf("/")) : "";
+    const path = window.prompt("مكان حفظ الملف", `${parent ? `${parent}/` : ""}${fileToUpload.name}`);
     if (!path?.trim()) return;
     await createFile(path.trim(), await fileToUpload.text(), `Upload ${path.trim()}`);
   }
@@ -308,6 +315,45 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
     await loadTree();
   }
 
+  function toggleSelection(path: string, paths = [path]) {
+    setSelectedFiles((current) => {
+      const next = new Set(current);
+      const shouldRemove = paths.every((item) => next.has(item));
+      paths.forEach((item) => shouldRemove ? next.delete(item) : next.add(item));
+      return next;
+    });
+  }
+
+  async function deleteSelectedFiles() {
+    if (!selectedFiles.size || !window.confirm(`سيتم حذف ${selectedFiles.size} ملفاً مباشرة من main. هل تريد المتابعة؟`)) return;
+    for (const path of selectedFiles) {
+      const response = await fetch(`/api/github/file?repo=${encodeURIComponent(repo)}&path=${encodeURIComponent(path)}`);
+      const current = (await response.json()) as GitHubFile;
+      if (response.ok) await fetch("/api/github/file", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ repo, path, sha: current.sha, message: `Delete ${path}` }) });
+    }
+    setSelectedFiles(new Set());
+    setSelectedPath("");
+    setFile(null);
+    await loadTree();
+  }
+
+  async function downloadSelectedFiles() {
+    if (!selectedFiles.size) return;
+    const zip = new JSZip();
+    for (const path of selectedFiles) {
+      const response = await fetch(`/api/github/file?repo=${encodeURIComponent(repo)}&path=${encodeURIComponent(path)}`);
+      const selected = (await response.json()) as GitHubFile;
+      if (response.ok) zip.file(path, selected.content);
+    }
+    const blob = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "qb-team-files.zip";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   function renderTree(node: Map<string, unknown>, prefix = "", level = 0): React.ReactNode {
     return [...node.entries()].sort(([, left], [, right]) => Number(right instanceof Map) - Number(left instanceof Map)).map(([name, value]) => {
       const path = prefix ? `${prefix}/${name}` : name;
@@ -317,7 +363,7 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
         return (
           <div key={path}>
             <button type="button" className="tree-folder" style={{ paddingInlineStart: `${level * 12 + 8}px` }} onClick={() => toggleFolder(path)}>
-              <span className={cn("tree-caret", expandedFolders.has(path) && "tree-caret-open")}>›</span><span className="tree-folder-icon">▣</span><span>{name}</span>
+              <span className={cn("tree-caret", expandedFolders.has(path) && "tree-caret-open")}>›</span><span className="tree-folder-icon">▣</span><span>{name}</span><span role="checkbox" aria-checked={[...selectedFiles].filter((filePath) => filePath.startsWith(`${path}/`)).length > 0} className="tree-select" onClick={(event) => { event.stopPropagation(); toggleSelection(path, filePaths.filter((filePath) => filePath.startsWith(`${path}/`))); }}>✓</span>
             </button>
             {expandedFolders.has(path) && <div className="tree-children">{renderTree(value as Map<string, unknown>, path, level + 1)}</div>}
           </div>
@@ -326,6 +372,7 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
 
       return (
         <button key={path} type="button" className={cn("tree-button", selectedPath === path && "tree-button-active")} style={{ paddingInlineStart: `${level * 12 + 12}px` }} onClick={() => openPath(path)}>
+          <span role="checkbox" aria-checked={selectedFiles.has(path)} className={cn("tree-select", selectedFiles.has(path) && "tree-select-active")} onClick={(event) => { event.stopPropagation(); toggleSelection(path); }}>✓</span>
           <span className="tree-file-icon">{fileIcon(path)}</span>
           <span className="text-slate-400">{selectedPath === path ? "●" : "○"}</span>
           <span className={selectedPath === path ? "font-semibold text-blue-700" : ""}>{name}</span>
@@ -370,6 +417,8 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
                 <button className="btn-secondary" onClick={() => uploadInput.current?.click()}>رفع ملف</button>
                 {file && <button className="btn-secondary" onClick={downloadFile}>تنزيل</button>}
                 {file && <button className="danger-button" onClick={() => void deleteCurrentFile()}>حذف الملف</button>}
+                {selectedFiles.size > 0 && <button className="btn-secondary" onClick={() => void downloadSelectedFiles()}>تنزيل المحدد ({selectedFiles.size})</button>}
+                {selectedFiles.size > 0 && <button className="danger-button" onClick={() => void deleteSelectedFiles()}>حذف المحدد ({selectedFiles.size})</button>}
                 <input ref={uploadInput} className="hidden" type="file" onChange={(event) => { const selected = event.target.files?.[0]; if (selected) void uploadFile(selected); event.currentTarget.value = ""; }} />
               </div>
             </div>
@@ -417,7 +466,7 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
               {!loadingFile && selectedPath && !file && !fileError && <p>تعذر عرض هذا الملف. ربما هو ملف ثنائي أو المسار غير صحيح.</p>}
               {!loadingFile && editing && file && (
                 <div className="space-y-3">
-                  <textarea className="editor-textarea code" value={draft} onChange={(event) => setDraft(event.target.value)} />
+                  <CodeEditor path={file.path} value={draft} onChange={setDraft} />
                   <input className="input" value={commitMessage} onChange={(event) => setCommitMessage(event.target.value)} placeholder="رسالة التعديل في GitHub" />
                   <div className="flex flex-wrap gap-2"><button className="btn-primary" disabled={saving} onClick={() => void saveToMain()}>{saving ? "جارٍ الحفظ..." : "احفظ في main"}</button><button className="btn-secondary" onClick={() => { setEditing(false); setEditorMessage(""); }}>إلغاء</button></div>
                 </div>
