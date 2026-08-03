@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     response.cookies.set(
       sessionCookieName,
       encodeSession({ user, repo: env.defaultRepo || "" }),
-      getCookieOptions(request.url),
+      getCookieOptions(request.url, true),
     );
 
     // Belt-and-suspenders: make sure no intermediate cache (CDN/proxy) stores

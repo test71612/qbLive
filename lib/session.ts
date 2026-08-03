@@ -46,13 +46,15 @@ function decodeSession(value: string | undefined): SessionData | null {
   }
 }
 
-export function getCookieOptions(requestUrl?: string) {
+export function getCookieOptions(requestUrl?: string, allowCrossSite = false) {
   const isSecure = requestUrl ? new URL(requestUrl).protocol === "https:" : process.env.NODE_ENV === "production";
 
   return {
     httpOnly: true,
     secure: isSecure,
-    sameSite: "lax" as const,
+    // OAuth returns from github.com, so Chrome can reject a Lax cookie set
+    // on that cross-site callback. Use None only for that initial response.
+    sameSite: (allowCrossSite && isSecure ? "none" : "lax") as "none" | "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 7,
   };
