@@ -2,16 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
-import type { RepoRecord, SessionUser } from "@/lib/types";
-
-type AppShellProps = {
-  user: SessionUser;
-  repos: RepoRecord[];
-  currentRepo: string;
-  children: React.ReactNode;
-};
+import { useAuth } from "@/components/auth-provider";
 
 const links = [
   { href: "/dashboard", label: "اللوحة" },
@@ -19,25 +12,23 @@ const links = [
   { href: "/tasks", label: "المهام" },
 ];
 
-export function AppShell({ user, repos, currentRepo, children }: AppShellProps) {
+export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [selectedRepo, setSelectedRepo] = useState(currentRepo);
-  const [isPending, startTransition] = useTransition();
-
-  useEffect(() => {
-    setSelectedRepo(currentRepo);
-  }, [currentRepo]);
+  const { user, repos, currentRepo, loading, updateRepo: persistRepo } = useAuth();
+  const [selectedRepo, setSelectedRepo] = useState("");
 
   async function updateRepo(repo: string) {
     setSelectedRepo(repo);
-    await fetch("/api/me", {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ repo }),
-    });
-    startTransition(() => router.refresh());
+    await persistRepo(repo);
   }
+
+  function logout() {
+    window.localStorage.removeItem("ops_hub_session");
+    router.replace("/");
+  }
+
+  if (loading || !user) return <main className="shell flex flex-1 items-center justify-center"><p className="card p-6 text-sm muted">جارٍ التحقق من الجلسة...</p></main>;
 
   return (
     <div className="shell">
@@ -72,9 +63,9 @@ export function AppShell({ user, repos, currentRepo, children }: AppShellProps) 
             <span className="font-medium">المستودع الحالي</span>
             <select
               className="input"
-              value={selectedRepo}
+              value={selectedRepo || currentRepo}
               onChange={(event) => void updateRepo(event.target.value)}
-              disabled={isPending || repos.length === 0}
+              disabled={repos.length === 0}
             >
               {repos.length === 0 && <option value="">لا يوجد مستودع بعد</option>}
               {repos.map((repo) => (
@@ -93,9 +84,9 @@ export function AppShell({ user, repos, currentRepo, children }: AppShellProps) 
                 @{user.login} · {user.role === "admin" ? "مسؤول" : "عضو"}
               </p>
             </div>
-            <Link href="/api/auth/logout" className="btn-secondary">
+            <button type="button" className="btn-secondary" onClick={logout}>
               تسجيل الخروج
-            </Link>
+            </button>
           </div>
         </div>
       </header>

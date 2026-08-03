@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { consumeSessionHandoff, encodeSession, getCookieOptions, sessionCookieName } from "@/lib/session";
+import { consumeSessionHandoff, encodeSession } from "@/lib/session";
 
 export async function POST(request: NextRequest) {
   const body = (await request.json()) as { session?: string };
@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "invalid_session_handoff" }, { status: 401 });
   }
 
-  const response = NextResponse.json({ status: "ok" });
-  response.cookies.set(sessionCookieName, encodeSession(session), getCookieOptions(request.url));
+  const response = NextResponse.json({ status: "ok", token: encodeSession(session) });
+  response.headers.set("Cache-Control", "no-store");
   return response;
 }

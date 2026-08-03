@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { env } from "@/lib/env";
 import type { SessionUser } from "@/lib/types";
@@ -22,29 +22,24 @@ type Session = SessionData & {
 export const sessionCookieName = "ops_hub_session";
 
 export function encodeSession(value: SessionData | SessionHandoff): string {
-  const payload = Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
-  const signature = createHmac("sha256", env.sessionSecret).update(payload).digest("hex");
-  return `${signature}.${payload}`;
+  const key = createHash("sha256").update(env.sessionSecret).digest();
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  const payload = Buffer.concat([cipher.update(JSON.stringify(value), "utf8"), cipher.final()]);
+  return `${iv.toString("base64url")}.${cipher.getAuthTag().toString("base64url")}.${payload.toString("base64url")}`;
 }
 
 function decodeSession(value: string | undefined): SessionData | null {
   if (!value) return null;
-  const separatorIndex = value.indexOf(".");
-  if (separatorIndex === -1) return null;
-
-  const signature = value.slice(0, separatorIndex);
-  const payload = value.slice(separatorIndex + 1);
-  const expectedSignature = createHmac("sha256", env.sessionSecret).update(payload).digest("hex");
-
-  const a = Buffer.from(signature);
-  const b = Buffer.from(expectedSignature);
-
-  if (a.length !== b.length || !timingSafeEqual(a, b)) {
-    return null;
-  }
+  const [iv, tag, payload] = value.split(".");
+  if (!iv || !tag || !payload) return null;
 
   try {
-    return JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as SessionData;
+    const key = createHash("sha256").update(env.sessionSecret).digest();
+    const decipher = createDecipheriv("aes-256-gcm", key, Buffer.from(iv, "base64url"));
+    decipher.setAuthTag(Buffer.from(tag, "base64url"));
+    const decrypted = Buffer.concat([decipher.update(Buffer.from(payload, "base64url")), decipher.final()]);
+    return JSON.parse(decrypted.toString("utf8")) as SessionData;
   } catch {
     return null;
   }
@@ -119,7 +114,10 @@ export async function clearSessionCookie() {
 
 export async function getSession(): Promise<Session> {
   const cookieStore = await cookies();
-  const storedValue = cookieStore.get(sessionCookieName)?.value;
+  const headerStore = await headers();
+  const authorization = headerStore.get("authorization");
+  const bearerToken = authorization?.startsWith("Bearer ") ? authorization.slice(7) : undefined;
+  const storedValue = bearerToken ?? cookieStore.get(sessionCookieName)?.value;
   const decoded = decodeSession(storedValue) ?? {};
 
   const sessionState: SessionData = {

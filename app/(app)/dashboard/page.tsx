@@ -1,24 +1,11 @@
-import Link from "next/link";
+"use client";
+
 import { DashboardClient } from "@/components/dashboard-client";
-import { getShellData } from "@/lib/page-data";
+import { useAuth } from "@/components/auth-provider";
 
-export const dynamic = "force-dynamic";
-
-export default async function DashboardPage() {
-  const { user, currentRepo } = await getShellData();
-
-  if (!user) {
-    return (
-      <div className="card p-6 text-sm muted">
-        لم يتم العثور على جلسة نشطة. يرجى تسجيل الدخول مرة أخرى ثم إعادة تحميل الصفحة.
-        <div className="mt-4">
-          <Link href="/" className="btn-primary">
-            الذهاب إلى الصفحة الرئيسية
-          </Link>
-        </div>
-      </div>
-    );
-  }
+export default function DashboardPage() {
+  const { user, currentRepo, loading } = useAuth();
+  if (loading || !user) return null;
 
   if (!currentRepo) {
     return (

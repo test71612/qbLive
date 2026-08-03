@@ -19,8 +19,10 @@ export default function CompleteAuthPage() {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ session }),
-    }).then((response) => {
-      if (response.ok) {
+    }).then(async (response) => {
+      const payload = (await response.json()) as { token?: string };
+      if (response.ok && payload.token) {
+        window.localStorage.setItem("ops_hub_session", payload.token);
         window.location.replace("/dashboard");
       } else {
         setMessage("تعذر إكمال تسجيل الدخول. يرجى المحاولة مرة أخرى.");

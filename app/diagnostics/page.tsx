@@ -89,13 +89,13 @@ export default async function DiagnosticsPage() {
             <p className="mt-2 text-sm text-slate-600">{session.user ? "نعم" : "لا"}</p>
           </div>
           <div className="rounded-2xl border border-slate-200 p-4">
-            <p className="font-semibold">حالة كوكي الجلسة</p>
+            <p className="font-semibold">حالة كوكي الجلسة (الطريقة القديمة)</p>
             <p className="mt-2 text-sm text-slate-600">
               {sessionCookieStatus === "valid"
                 ? "وصلت وصالحة"
                 : sessionCookieStatus === "invalid"
                   ? "وصلت لكن التوقيع غير صالح"
-                  : "لم تصل من المتصفح"}
+                  : "غير مستخدمة؛ الجلسة الآن تحفظ محلياً بشكل مشفّر"}
             </p>
           </div>
           <div className="rounded-2xl border border-slate-200 p-4">
