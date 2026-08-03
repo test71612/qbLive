@@ -109,16 +109,18 @@ export async function getSession(): Promise<Session> {
     repo: decoded.repo,
   };
 
-  return {
+  const session: Session = {
     ...sessionState,
     async save() {
       const requestUrl = await currentRequestUrl();
-      await writeSessionCookie(sessionState, requestUrl);
+      await writeSessionCookie({ user: session.user, repo: session.repo }, requestUrl);
     },
     async destroy() {
       await clearSessionCookie();
     },
   };
+
+  return session;
 }
 
 export async function getSessionUser() {

@@ -13,10 +13,5 @@ export async function getShellData() {
   const repos = (await listAvailableRepos()) as RepoRecord[];
   const preferredRepo = session.repo || env.defaultRepo || repos[0]?.repo || "";
 
-  if (preferredRepo && !session.repo) {
-    session.repo = preferredRepo;
-    await session.save();
-  }
-
   return { user, repos, currentRepo: preferredRepo };
 }

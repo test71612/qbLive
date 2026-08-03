@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { listAvailableRepos } from "@/lib/github";
-import { getSession, getSessionUser } from "@/lib/session";
+import { encodeSession, getCookieOptions, getSession, getSessionUser, sessionCookieName } from "@/lib/session";
 
 export async function GET() {
   const user = await getSessionUser();
@@ -26,9 +26,14 @@ export async function PATCH(request: NextRequest) {
   }
 
   const body = (await request.json()) as { repo?: string };
+  const repo = body.repo?.trim() ?? "";
   const session = await getSession();
-  session.repo = body.repo?.trim() ?? "";
-  await session.save();
+  const response = NextResponse.json({ status: "ok" });
+  response.cookies.set(
+    sessionCookieName,
+    encodeSession({ user: session.user, repo }),
+    getCookieOptions(request.url),
+  );
 
-  return NextResponse.json({ status: "ok" });
+  return response;
 }

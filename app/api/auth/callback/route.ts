@@ -1,8 +1,7 @@
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { exchangeGitHubCode, loadGitHubUser, upsertAppUser } from "@/lib/github";
-import { encodeSession, sessionCookieName } from "@/lib/session";
+import { encodeSession, getCookieOptions, sessionCookieName } from "@/lib/session";
 
 // Make sure this route is never statically optimized/cached — it must run
 // per-request and must never have its Set-Cookie response reused across users.
@@ -19,16 +18,12 @@ export async function GET(request: NextRequest) {
     const user = await loadGitHubUser(accessToken);
     await upsertAppUser(user);
 
-    const cookieStore = await cookies();
-    cookieStore.set(sessionCookieName, encodeSession({ user, repo: env.defaultRepo || "" }), {
-      httpOnly: true,
-      secure: new URL(request.url).protocol === "https:",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7,
-    });
-
     const response = NextResponse.redirect(new URL("/dashboard", request.url));
+    response.cookies.set(
+      sessionCookieName,
+      encodeSession({ user, repo: env.defaultRepo || "" }),
+      getCookieOptions(request.url),
+    );
 
     // Belt-and-suspenders: make sure no intermediate cache (CDN/proxy) stores
     // this response and replays someone else's session cookie.
