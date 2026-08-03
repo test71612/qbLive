@@ -11,6 +11,7 @@ const links = [
   { href: "/explorer", label: "المستكشف" },
   { href: "/map", label: "خريطة المشروع" },
   { href: "/tasks", label: "المهام" },
+  { href: "/developers", label: "المطورون" },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {

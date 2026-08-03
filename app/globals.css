@@ -155,6 +155,25 @@ textarea {
 .file-actions .btn-secondary, .danger-button { @apply px-3 py-1.5 text-xs; }
 .danger-button { @apply inline-flex items-center justify-center rounded-xl border border-rose-500/30 bg-rose-500/10 font-bold text-rose-300 transition hover:bg-rose-500 hover:text-white; }
 
+.developers-hero { background: radial-gradient(circle at 85% 10%, #f97316 0%, #54270b 22%, #17191f 62%); @apply rounded-3xl border border-orange-400/30 p-7 shadow-2xl shadow-orange-950/20; }
+.developers-hero p { @apply text-xs font-black tracking-[0.2em] text-orange-300; }
+.developers-hero h1 { @apply mt-3 text-3xl font-black text-white md:text-4xl; }
+.developers-hero span { @apply mt-3 block max-w-3xl text-sm leading-7 text-slate-200; }
+.developer-add-form { @apply flex w-full flex-col gap-2 sm:flex-row lg:w-[430px]; }
+.developer-add-form .input { @apply flex-1; }
+.developer-message { @apply mt-4 rounded-xl border border-orange-400/25 bg-orange-500/10 px-3 py-2 text-sm font-semibold text-orange-200; }
+.developer-grid { @apply grid gap-4 md:grid-cols-2 xl:grid-cols-3; }
+.developer-card { @apply rounded-3xl border border-white/10 bg-[#16181d] p-5 shadow-lg shadow-black/20; }
+.developer-avatar { @apply h-12 w-12 shrink-0 rounded-2xl border border-orange-400/30 object-cover; }
+.developer-avatar-fallback { @apply flex items-center justify-center bg-orange-500 font-black text-black; }
+.developer-role { @apply rounded-full bg-fuchsia-500/15 px-2 py-0.5 text-[10px] font-black text-fuchsia-200; }
+.developer-you { @apply rounded-full bg-cyan-400/15 px-2 py-0.5 text-[10px] font-black text-cyan-100; }
+.presence { @apply shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black; }
+.presence-online { @apply bg-emerald-400/15 text-emerald-300; }
+.presence-offline { @apply bg-slate-500/20 text-slate-300; }
+.developer-status { @apply mt-4 flex flex-wrap gap-1 text-xs text-slate-400; }
+.developer-work { @apply mt-4 space-y-3 rounded-2xl border border-orange-400/20 bg-orange-500/5 p-3 text-sm; }
+
 .top-grid {
   @apply grid gap-6 lg:grid-cols-[1.35fr_0.95fr];
 }

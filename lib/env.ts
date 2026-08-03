@@ -12,6 +12,15 @@ function optional(name: string, fallback = ""): string {
   return process.env[name] ?? fallback;
 }
 
+const configuredAdmins = optional("ADMIN_GITHUB_USERNAMES")
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+// The first historical admin remains the safe fallback, so existing installs
+// keep working until OWNER_GITHUB_USERNAME is explicitly set.
+const configuredOwner = optional("OWNER_GITHUB_USERNAME", configuredAdmins[0] ?? "").trim();
+
 function inferDefaultRepo(): string {
   const explicit = optional("DEFAULT_REPO", "").trim();
   if (explicit) {
@@ -60,10 +69,8 @@ export const env = {
   supabaseAnonKey: required("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
   supabaseServiceRoleKey: required("SUPABASE_SERVICE_ROLE_KEY"),
   defaultRepo: inferDefaultRepo(),
-  adminGitHubUsernames: optional("ADMIN_GITHUB_USERNAMES")
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean),
+  adminGitHubUsernames: configuredAdmins,
+  ownerGitHubUsername: configuredOwner,
   lockIdleHours: Number(optional("LOCK_IDLE_HOURS", "3")),
   aiApiKey: optional("AI_API_KEY"),
   aiBaseUrl: optional("AI_BASE_URL", "https://openrouter.ai/api/v1"),

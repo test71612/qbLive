@@ -4,8 +4,9 @@ import { getSessionUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home() {
+export default async function Home({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const user = await getSessionUser();
+  const { error } = await searchParams;
   if (user) {
     redirect("/dashboard");
   }
@@ -31,6 +32,12 @@ export default async function Home() {
               ماذا أحتاج قبل النشر؟
             </a>
           </div>
+          {error === "access_denied" && (
+            <p className="mt-5 rounded-2xl border border-orange-400/30 bg-orange-500/10 px-4 py-3 text-sm font-semibold text-orange-200">
+              هذا الحساب غير مضاف إلى فريق QB Team بعد. اطلب من أحد المطورين المسجلين أن يضيف اسم حسابك في صفحة المطورون.
+            </p>
+          )}
+          {error === "oauth_failed" && <p className="mt-5 text-sm text-rose-300">تعذر إكمال تسجيل الدخول. أعد المحاولة بعد لحظة.</p>}
         </div>
 
         <div className="space-y-6">

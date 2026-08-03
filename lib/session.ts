@@ -3,6 +3,7 @@ import "server-only";
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { env } from "@/lib/env";
+import { isAppUserAllowed } from "@/lib/github";
 import type { SessionUser } from "@/lib/types";
 
 type SessionData = {
@@ -152,7 +153,8 @@ export async function getSessionCookieStatus(): Promise<"missing" | "invalid" | 
 
 export async function getSessionUser() {
   const session = await getSession();
-  return session.user ?? null;
+  if (!session.user) return null;
+  return (await isAppUserAllowed(session.user.login)) ? session.user : null;
 }
 
 export async function requireSessionUser() {

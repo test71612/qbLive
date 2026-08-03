@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { env } from "@/lib/env";
-import { exchangeGitHubCode, loadGitHubUser, upsertAppUser } from "@/lib/github";
+import { admitAndTouchAppUser, exchangeGitHubCode, loadGitHubUser } from "@/lib/github";
 import { createSessionHandoff } from "@/lib/session";
 
 // Make sure this route is never statically optimized/cached — it must run
@@ -15,8 +15,8 @@ export async function GET(request: NextRequest) {
 
   try {
     const accessToken = await exchangeGitHubCode(code);
-    const user = await loadGitHubUser(accessToken);
-    await upsertAppUser(user);
+    const githubUser = await loadGitHubUser(accessToken);
+    const user = await admitAndTouchAppUser(githubUser);
 
     const completionUrl = new URL("/auth/complete", request.url);
     completionUrl.hash = `session=${encodeURIComponent(createSessionHandoff({ user, repo: env.defaultRepo || "" }))}`;
@@ -32,7 +32,8 @@ export async function GET(request: NextRequest) {
     response.headers.set("x-session-origin", new URL(request.url).origin);
 
     return response;
-  } catch {
-    return NextResponse.redirect(new URL("/?error=oauth_failed", request.url));
+  } catch (error) {
+    const code = error instanceof Error && error.message === "access_denied" ? "access_denied" : "oauth_failed";
+    return NextResponse.redirect(new URL(`/?error=${code}`, request.url));
   }
 }
