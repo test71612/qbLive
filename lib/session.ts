@@ -10,6 +10,10 @@ type SessionData = {
   repo?: string;
 };
 
+type SessionHandoff = SessionData & {
+  expiresAt: number;
+};
+
 type Session = SessionData & {
   save: () => Promise<void>;
   destroy: () => Promise<void>;
@@ -17,7 +21,7 @@ type Session = SessionData & {
 
 export const sessionCookieName = "ops_hub_session";
 
-export function encodeSession(value: SessionData): string {
+export function encodeSession(value: SessionData | SessionHandoff): string {
   const payload = Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
   const signature = createHmac("sha256", env.sessionSecret).update(payload).digest("hex");
   return `${signature}.${payload}`;
@@ -46,18 +50,30 @@ function decodeSession(value: string | undefined): SessionData | null {
   }
 }
 
-export function getCookieOptions(requestUrl?: string, allowCrossSite = false) {
+export function getCookieOptions(requestUrl?: string) {
   const isSecure = requestUrl ? new URL(requestUrl).protocol === "https:" : process.env.NODE_ENV === "production";
 
   return {
     httpOnly: true,
     secure: isSecure,
-    // OAuth returns from github.com, so Chrome can reject a Lax cookie set
-    // on that cross-site callback. Use None only for that initial response.
-    sameSite: (allowCrossSite && isSecure ? "none" : "lax") as "none" | "lax",
+    sameSite: "lax" as const,
     path: "/",
     maxAge: 60 * 60 * 24 * 7,
   };
+}
+
+export function createSessionHandoff(value: SessionData): string {
+  return encodeSession({ ...value, expiresAt: Date.now() + 60_000 });
+}
+
+export function consumeSessionHandoff(value: string | undefined): SessionData | null {
+  const decoded = decodeSession(value) as SessionHandoff | null;
+
+  if (!decoded || !Number.isFinite(decoded.expiresAt) || decoded.expiresAt < Date.now()) {
+    return null;
+  }
+
+  return { user: decoded.user, repo: decoded.repo };
 }
 
 function inferRequestProtocol(host: string | null, forwardedProto: string | null) {
