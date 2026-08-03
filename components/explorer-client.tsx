@@ -25,6 +25,8 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
   const [locks, setLocks] = useState<FileLock[]>([]);
   const [loadingTree, setLoadingTree] = useState(true);
   const [loadingFile, setLoadingFile] = useState(false);
+  const [treeError, setTreeError] = useState("");
+  const [fileError, setFileError] = useState("");
 
   const loadLocks = useCallback(async () => {
     const response = await fetch(`/api/locks?repo=${encodeURIComponent(repo)}`);
@@ -35,8 +37,15 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
   const loadTree = useCallback(async () => {
     if (!repo) return;
     setLoadingTree(true);
+    setTreeError("");
     const response = await fetch(`/api/github/tree?repo=${encodeURIComponent(repo)}`);
     const payload = await response.json();
+    if (!response.ok) {
+      setTree([]);
+      setTreeError(payload.error ?? "تعذر تحميل شجرة الملفات.");
+      setLoadingTree(false);
+      return;
+    }
     setTree(payload.tree ?? []);
     setLoadingTree(false);
   }, [repo]);
@@ -45,6 +54,7 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
     async (path: string) => {
       if (!repo || !path) return;
       setLoadingFile(true);
+      setFileError("");
 
       const [fileRes, noteRes, relatedRes, commitsRes] = await Promise.all([
         fetch(`/api/github/file?repo=${encodeURIComponent(repo)}&path=${encodeURIComponent(path)}`),
@@ -57,6 +67,21 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
       const notePayload = await noteRes.json();
       const relatedPayload = await relatedRes.json();
       const commitsPayload = await commitsRes.json();
+
+      if (!fileRes.ok) {
+        setFile(null);
+        setFileError(filePayload.error ?? "تعذر عرض هذا الملف.");
+        setNote(notePayload.note?.note ?? "");
+        setNoteSavedAt(notePayload.note?.updated_at ?? "");
+        setRelated({
+          imports: relatedPayload.imports ?? [],
+          importedBy: relatedPayload.importedBy ?? [],
+          manual: relatedPayload.manual ?? [],
+        });
+        setCommits(commitsPayload.commits ?? []);
+        setLoadingFile(false);
+        return;
+      }
 
       setFile(filePayload.path ? filePayload : null);
       setNote(notePayload.note?.note ?? "");
@@ -200,6 +225,8 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
 
         <div className="mt-4 max-h-[70vh] overflow-auto">
           {loadingTree ? <p className="text-sm muted">جارٍ تحميل شجرة الملفات...</p> : renderTree(treeData)}
+          {!loadingTree && treeError && <p className="text-sm text-rose-700">{treeError}</p>}
+          {!loadingTree && !treeError && filePaths.length === 0 && <p className="text-sm muted">لم نجد ملفات لعرضها في هذا المستودع.</p>}
         </div>
       </aside>
 
@@ -249,7 +276,8 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
             <div className="max-h-[70vh] overflow-auto bg-slate-950 p-5 text-sm text-slate-100">
               {!selectedPath && <p>اختر ملفًا لعرض محتواه.</p>}
               {loadingFile && <p>جارٍ تحميل الملف...</p>}
-              {!loadingFile && selectedPath && !file && <p>تعذر عرض هذا الملف. ربما هو ملف ثنائي أو المسار غير صحيح.</p>}
+              {!loadingFile && selectedPath && fileError && <p>{fileError}</p>}
+              {!loadingFile && selectedPath && !file && !fileError && <p>تعذر عرض هذا الملف. ربما هو ملف ثنائي أو المسار غير صحيح.</p>}
               {!loadingFile && file && (
                 <pre className="code whitespace-pre-wrap break-words">
                   {isTextPath(file.path) ? file.content : "هذا النوع من الملفات لا يُعرض كنص داخل المستكشف."}

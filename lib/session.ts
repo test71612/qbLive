@@ -58,6 +58,22 @@ export function getCookieOptions(requestUrl?: string) {
   };
 }
 
+function inferRequestProtocol(host: string | null, forwardedProto: string | null) {
+  if (forwardedProto) {
+    return forwardedProto;
+  }
+
+  if (host?.startsWith("localhost") || host?.startsWith("127.0.0.1")) {
+    return "http";
+  }
+
+  try {
+    return new URL(env.appUrl).protocol.replace(":", "") || (process.env.NODE_ENV === "production" ? "https" : "http");
+  } catch {
+    return process.env.NODE_ENV === "production" ? "https" : "http";
+  }
+}
+
 // Best-effort way to recover the current request's origin when no explicit
 // requestUrl is passed in (e.g. from a Server Action rather than a Route
 // Handler). Falls back to env.appUrl if headers aren't available.
@@ -65,7 +81,7 @@ async function currentRequestUrl(): Promise<string | undefined> {
   try {
     const headerStore = await headers();
     const host = headerStore.get("x-forwarded-host") ?? headerStore.get("host");
-    const proto = headerStore.get("x-forwarded-proto") ?? "https";
+    const proto = inferRequestProtocol(host, headerStore.get("x-forwarded-proto"));
     if (host) return `${proto}://${host}`;
   } catch {
     // headers() not available in this context — fall through.

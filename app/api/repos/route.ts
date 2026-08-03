@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listConnectedRepos, logAuditEvent } from "@/lib/github";
+import { listAvailableRepos, logAuditEvent } from "@/lib/github";
 import { getSessionUser } from "@/lib/session";
 import { serviceClient } from "@/lib/supabase";
 
@@ -9,7 +9,7 @@ export async function GET() {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const repos = await listConnectedRepos();
+  const repos = await listAvailableRepos();
   return NextResponse.json({ repos });
 }
 

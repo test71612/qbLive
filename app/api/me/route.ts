@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { env } from "@/lib/env";
-import { listConnectedRepos } from "@/lib/github";
+import { listAvailableRepos } from "@/lib/github";
 import { getSession, getSessionUser } from "@/lib/session";
 
 export async function GET() {
@@ -10,7 +10,7 @@ export async function GET() {
   }
 
   const session = await getSession();
-  const repos = await listConnectedRepos();
+  const repos = await listAvailableRepos();
 
   return NextResponse.json({
     user,

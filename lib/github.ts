@@ -4,7 +4,7 @@ import { Octokit } from "octokit";
 import { env } from "@/lib/env";
 import { serviceClient } from "@/lib/supabase";
 import { parseRepo, decodeBase64 } from "@/lib/utils";
-import type { GitHubCommit, GitHubFile, GitHubTreeNode, Role, SessionUser } from "@/lib/types";
+import type { GitHubCommit, GitHubFile, GitHubTreeNode, RepoRecord, Role, SessionUser } from "@/lib/types";
 
 export function githubClient(accessToken: string) {
   return new Octokit({ auth: accessToken });
@@ -68,6 +68,24 @@ export async function listConnectedRepos() {
   const { data, error } = await db.from("repos").select("*").order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
   return data ?? [];
+}
+
+export async function listAvailableRepos(): Promise<RepoRecord[]> {
+  const repos = (await listConnectedRepos()) as RepoRecord[];
+
+  if (!env.defaultRepo || repos.some((repo) => repo.repo === env.defaultRepo)) {
+    return repos;
+  }
+
+  return [
+    {
+      repo: env.defaultRepo,
+      label: "المستودع الافتراضي",
+      added_by: null,
+      created_at: new Date(0).toISOString(),
+    },
+    ...repos,
+  ];
 }
 
 export async function fetchRepoTree(accessToken: string, repoId: string): Promise<GitHubTreeNode[]> {

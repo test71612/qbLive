@@ -1,5 +1,5 @@
 import { env } from "@/lib/env";
-import { listConnectedRepos } from "@/lib/github";
+import { listAvailableRepos } from "@/lib/github";
 import { getSession, getSessionUser } from "@/lib/session";
 import type { RepoRecord } from "@/lib/types";
 
@@ -10,7 +10,7 @@ export async function getShellData() {
   }
 
   const session = await getSession();
-  const repos = (await listConnectedRepos()) as RepoRecord[];
+  const repos = (await listAvailableRepos()) as RepoRecord[];
   const preferredRepo = session.repo || env.defaultRepo || repos[0]?.repo || "";
 
   if (preferredRepo && !session.repo) {
