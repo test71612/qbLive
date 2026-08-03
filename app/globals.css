@@ -147,8 +147,8 @@ textarea {
 .map-empty h2 { @apply text-2xl font-black text-orange-300; }
 .map-empty p { @apply mx-auto my-3 max-w-xl text-sm leading-7 text-slate-400; }
 .editor-textarea { @apply min-h-[52vh] w-full rounded-xl border border-orange-400/30 bg-black/30 p-4 text-sm text-orange-50 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-500/20; }
-.code-editor { @apply overflow-hidden rounded-xl border border-orange-400/30; }
-.code-editor-fullscreen { @apply fixed inset-0 z-50 bg-[#0c0d10] p-4; }
+.code-editor { direction: ltr; @apply overflow-hidden rounded-xl border border-orange-400/30; }
+.code-editor-fullscreen { direction: ltr; @apply fixed inset-0 z-50 bg-[#0c0d10] p-4; }
 .code-editor-bar { @apply flex items-center justify-between bg-[#181b21] px-3 py-2 text-xs font-bold text-slate-300; }
 .code-editor-bar button { @apply rounded-lg bg-orange-500 px-3 py-1.5 text-xs font-bold text-black transition hover:bg-orange-400; }
 .file-actions { @apply mt-3 flex flex-wrap gap-2; }
