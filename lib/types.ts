@@ -71,6 +71,7 @@ export type GitHubFile = {
 
 export type GitHubCommit = {
   sha: string;
+  fullSha: string;
   message: string;
   author: string;
   date: string;

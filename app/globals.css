@@ -143,6 +143,7 @@ textarea {
 .map-empty { @apply rounded-3xl border border-orange-400/20 bg-[#16181d] p-8 text-center; }
 .map-empty h2 { @apply text-2xl font-black text-orange-300; }
 .map-empty p { @apply mx-auto my-3 max-w-xl text-sm leading-7 text-slate-400; }
+.editor-textarea { @apply min-h-[52vh] w-full rounded-xl border border-orange-400/30 bg-black/30 p-4 text-sm text-orange-50 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-500/20; }
 
 .top-grid {
   @apply grid gap-6 lg:grid-cols-[1.35fr_0.95fr];

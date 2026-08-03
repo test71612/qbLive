@@ -119,13 +119,14 @@ export async function fetchRepoTree(accessToken: string, repoId: string): Promis
     }));
 }
 
-export async function fetchFile(accessToken: string, repoId: string, filePath: string): Promise<GitHubFile> {
+export async function fetchFile(accessToken: string, repoId: string, filePath: string, ref?: string): Promise<GitHubFile> {
   const client = githubClient(accessToken);
   const { owner, repo } = parseRepo(repoId);
   const response = await client.request("GET /repos/{owner}/{repo}/contents/{path}", {
     owner,
     repo,
     path: filePath,
+    ref,
   });
 
   if (Array.isArray(response.data) || response.data.type !== "file" || !response.data.content) {
@@ -137,6 +138,20 @@ export async function fetchFile(accessToken: string, repoId: string, filePath: s
     content: decodeBase64(response.data.content.replace(/\n/g, "")),
     sha: response.data.sha,
   };
+}
+
+export async function updateGitHubFile(accessToken: string, repoId: string, filePath: string, content: string, sha: string, message: string) {
+  const client = githubClient(accessToken);
+  const { owner, repo } = parseRepo(repoId);
+  const response = await client.request("PUT /repos/{owner}/{repo}/contents/{path}", {
+    owner,
+    repo,
+    path: filePath,
+    message,
+    content: Buffer.from(content, "utf8").toString("base64"),
+    sha,
+  });
+  return { commitSha: response.data.commit.sha, url: response.data.commit.html_url };
 }
 
 export async function fetchCommits(accessToken: string, repoId: string, path?: string, limit = 10): Promise<GitHubCommit[]> {
@@ -151,6 +166,7 @@ export async function fetchCommits(accessToken: string, repoId: string, path?: s
 
   return data.map((commit) => ({
     sha: commit.sha.slice(0, 7),
+    fullSha: commit.sha,
     message: commit.commit.message.split("\n")[0] ?? commit.sha.slice(0, 7),
     author: commit.commit.author?.name ?? commit.author?.login ?? "unknown",
     date: commit.commit.author?.date ?? new Date().toISOString(),

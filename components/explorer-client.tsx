@@ -29,6 +29,11 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
   const [treeError, setTreeError] = useState("");
   const [fileError, setFileError] = useState("");
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => new Set(["app", "components", "lib"]));
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [commitMessage, setCommitMessage] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [editorMessage, setEditorMessage] = useState("");
 
   const loadLocks = useCallback(async () => {
     const response = await fetch(`/api/locks?repo=${encodeURIComponent(repo)}`);
@@ -86,6 +91,10 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
       }
 
       setFile(filePayload.path ? filePayload : null);
+      setEditing(false);
+      setDraft(filePayload.content ?? "");
+      setCommitMessage("");
+      setEditorMessage("");
       setNote(notePayload.note?.note ?? "");
       setNoteSavedAt(notePayload.note?.updated_at ?? "");
       setRelated({
@@ -210,6 +219,45 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
     await loadLocks();
   }
 
+  async function saveToMain(content = draft, message = commitMessage) {
+    if (!file || !selectedPath || !message.trim()) {
+      setEditorMessage("اكتب رسالة قصيرة تصف التعديل قبل الحفظ.");
+      return;
+    }
+    setSaving(true);
+    setEditorMessage("");
+    const response = await fetch("/api/github/file", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ repo, path: selectedPath, content, sha: file.sha, message: message.trim() }),
+    });
+    const payload = (await response.json()) as { error?: string };
+    if (!response.ok) {
+      setEditorMessage("تعذر الحفظ. ربما عدّل شخص آخر الملف؛ أعد تحميله ثم حاول مرة أخرى.");
+      setSaving(false);
+      return;
+    }
+    setEditorMessage("تم الحفظ مباشرة في GitHub.");
+    setEditing(false);
+    await loadFile(selectedPath);
+    setSaving(false);
+  }
+
+  async function restoreCommit(commit: GitHubCommit) {
+    if (!selectedPath || !file) return;
+    const confirmed = window.confirm(`سيتم استرجاع نسخة ${commit.sha} وحفظها مباشرة في main. هل تريد المتابعة؟`);
+    if (!confirmed) return;
+    setSaving(true);
+    const response = await fetch(`/api/github/file?repo=${encodeURIComponent(repo)}&path=${encodeURIComponent(selectedPath)}&ref=${encodeURIComponent(commit.fullSha)}`);
+    const historicFile = (await response.json()) as GitHubFile;
+    if (!response.ok || !historicFile.content) {
+      setEditorMessage("تعذر تحميل النسخة السابقة.");
+      setSaving(false);
+      return;
+    }
+    await saveToMain(historicFile.content, `Restore ${selectedPath} to ${commit.sha}`);
+  }
+
   function renderTree(node: Map<string, unknown>, prefix = "", level = 0): React.ReactNode {
     return [...node.entries()].sort(([, left], [, right]) => Number(right instanceof Map) - Number(left instanceof Map)).map(([name, value]) => {
       const path = prefix ? `${prefix}/${name}` : name;
@@ -300,15 +348,24 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
 
         <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
           <section className="card overflow-hidden">
-            <div className="border-b border-slate-200 px-5 py-4">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
               <h3 className="font-bold">معاينة الملف</h3>
+              {file && isTextPath(file.path) && !editing && <button className="btn-secondary text-xs" onClick={() => { setDraft(file.content); setEditing(true); }}>عدّل الملف</button>}
             </div>
             <div className="max-h-[70vh] overflow-auto bg-slate-950 p-5 text-sm text-slate-100">
               {!selectedPath && <p>اختر ملفًا لعرض محتواه.</p>}
               {loadingFile && <p>جارٍ تحميل الملف...</p>}
               {!loadingFile && selectedPath && fileError && <p>{fileError}</p>}
               {!loadingFile && selectedPath && !file && !fileError && <p>تعذر عرض هذا الملف. ربما هو ملف ثنائي أو المسار غير صحيح.</p>}
-              {!loadingFile && file && (
+              {!loadingFile && editing && file && (
+                <div className="space-y-3">
+                  <textarea className="editor-textarea code" value={draft} onChange={(event) => setDraft(event.target.value)} />
+                  <input className="input" value={commitMessage} onChange={(event) => setCommitMessage(event.target.value)} placeholder="رسالة التعديل في GitHub" />
+                  <div className="flex flex-wrap gap-2"><button className="btn-primary" disabled={saving} onClick={() => void saveToMain()}>{saving ? "جارٍ الحفظ..." : "احفظ في main"}</button><button className="btn-secondary" onClick={() => { setEditing(false); setEditorMessage(""); }}>إلغاء</button></div>
+                </div>
+              )}
+              {editorMessage && <p className="mt-3 rounded-xl bg-orange-500/10 p-3 text-xs text-orange-200">{editorMessage}</p>}
+              {!loadingFile && file && !editing && (
                 <pre className="code whitespace-pre-wrap break-words">
                   {isTextPath(file.path) ? file.content : "هذا النوع من الملفات لا يُعرض كنص داخل المستكشف."}
                 </pre>
@@ -373,12 +430,10 @@ export function ExplorerClient({ repo, login, role, initialPath }: ExplorerClien
               <div className="mt-4 space-y-3">
                 {commits.length === 0 && <p className="text-sm muted">لا توجد بيانات بعد.</p>}
                 {commits.map((commit) => (
-                  <a key={commit.sha} href={commit.url} target="_blank" rel="noreferrer" className="block rounded-xl border border-slate-200 p-3 hover:bg-slate-50">
-                    <p className="text-sm font-semibold">{commit.message}</p>
-                    <p className="mt-1 text-xs muted">
-                      {commit.author} · {formatRelativeDate(commit.date)} · <span className="code">{commit.sha}</span>
-                    </p>
-                  </a>
+                  <div key={commit.fullSha} className="rounded-xl border border-slate-200 p-3">
+                    <a href={commit.url} target="_blank" rel="noreferrer" className="block hover:text-orange-300"><p className="text-sm font-semibold">{commit.message}</p><p className="mt-1 text-xs muted">{commit.author} · {formatRelativeDate(commit.date)} · <span className="code">{commit.sha}</span></p></a>
+                    <button className="btn-secondary mt-3 text-xs" disabled={saving} onClick={() => void restoreCommit(commit)}>استرجع هذه النسخة إلى main</button>
+                  </div>
                 ))}
               </div>
             </section>
